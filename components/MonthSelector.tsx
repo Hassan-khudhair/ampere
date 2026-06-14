@@ -18,11 +18,11 @@ export function MonthSelector({ year, month }: MonthSelectorProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2">
       <select
         value={month}
         onChange={(e) => navigate(year, parseInt(e.target.value))}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 shadow-sm transition-all"
       >
         {ARABIC_MONTHS.map((name, i) => (
           <option key={i} value={i + 1}>{name}</option>
@@ -31,7 +31,7 @@ export function MonthSelector({ year, month }: MonthSelectorProps) {
       <select
         value={year}
         onChange={(e) => navigate(parseInt(e.target.value), month)}
-        className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 shadow-sm transition-all"
       >
         {years.map((y) => (
           <option key={y} value={y}>{y}</option>

@@ -2,31 +2,34 @@ interface StatCardProps {
   title: string
   value: string | number
   subtitle?: string
-  color?: 'blue' | 'green' | 'red' | 'amber' | 'slate'
-  icon?: string
+  color?: 'blue' | 'green' | 'red' | 'amber' | 'slate' | 'purple'
+  icon?: React.ReactNode
 }
 
 const colorMap = {
-  blue:  { card: 'bg-blue-50 border-blue-100',  icon: 'bg-blue-100 text-blue-600',  value: 'text-blue-700' },
-  green: { card: 'bg-green-50 border-green-100', icon: 'bg-green-100 text-green-600', value: 'text-green-700' },
-  red:   { card: 'bg-red-50 border-red-100',    icon: 'bg-red-100 text-red-600',    value: 'text-red-700' },
-  amber: { card: 'bg-amber-50 border-amber-100', icon: 'bg-amber-100 text-amber-600', value: 'text-amber-700' },
-  slate: { card: 'bg-white border-slate-100',    icon: 'bg-slate-100 text-slate-600', value: 'text-slate-700' },
+  blue:   { bg: 'bg-blue-500',   light: 'bg-blue-50',   text: 'text-blue-600',   value: 'text-blue-700',   border: 'border-blue-100' },
+  green:  { bg: 'bg-emerald-500', light: 'bg-emerald-50', text: 'text-emerald-600', value: 'text-emerald-700', border: 'border-emerald-100' },
+  red:    { bg: 'bg-red-500',    light: 'bg-red-50',    text: 'text-red-600',    value: 'text-red-700',    border: 'border-red-100' },
+  amber:  { bg: 'bg-amber-500',  light: 'bg-amber-50',  text: 'text-amber-600',  value: 'text-amber-700',  border: 'border-amber-100' },
+  slate:  { bg: 'bg-slate-600',  light: 'bg-slate-50',  text: 'text-slate-600',  value: 'text-slate-700',  border: 'border-slate-100' },
+  purple: { bg: 'bg-purple-500', light: 'bg-purple-50', text: 'text-purple-600', value: 'text-purple-700', border: 'border-purple-100' },
 }
 
 export function StatCard({ title, value, subtitle, color = 'slate', icon }: StatCardProps) {
-  const colors = colorMap[color]
+  const c = colorMap[color]
   return (
-    <div className={`rounded-xl border p-5 ${colors.card}`}>
+    <div className={`bg-white rounded-2xl border ${c.border} p-5 shadow-sm hover:shadow-md transition-shadow`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className={`text-2xl font-bold ${colors.value}`}>{value}</p>
-          {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+          <p className="text-sm text-slate-500 font-medium mb-2">{title}</p>
+          <p className={`text-2xl font-bold ${c.value} leading-none`}>{value}</p>
+          {subtitle && (
+            <p className="text-xs text-slate-400 mt-1.5">{subtitle}</p>
+          )}
         </div>
         {icon && (
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${colors.icon}`}>
-            {icon}
+          <div className={`w-11 h-11 rounded-xl ${c.light} flex items-center justify-center shrink-0`}>
+            <span className={c.text}>{icon}</span>
           </div>
         )}
       </div>

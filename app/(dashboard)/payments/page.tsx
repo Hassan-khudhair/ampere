@@ -38,27 +38,21 @@ export default async function PaymentsPage({
   let generatorName: string | null = null
   if (generatorId) {
     const { data: genData } = await supabase
-      .from('generators')
-      .select('name')
-      .eq('id', generatorId)
-      .single()
+      .from('generators').select('name').eq('id', generatorId).single()
     generatorName = (genData as Pick<Generator, 'name'> | null)?.name ?? null
   }
 
   let query = supabase
     .from('monthly_payments')
     .select('*, subscribers(id, full_name, ampere_count, phone_number, active)')
-    .eq('year', year)
-    .eq('month', month)
+    .eq('year', year).eq('month', month)
     .order('created_at', { ascending: true })
 
-  if (userRole?.role !== 'super_admin' && generatorId) {
+  if (userRole?.role !== 'super_admin' && generatorId)
     query = query.eq('generator_id', generatorId)
-  }
 
   const { data: paymentsData } = await query
   const payments = (paymentsData as PaymentRow[] | null) ?? []
-
   const activePayments = payments.filter((p) => p.subscribers?.active !== false)
 
   const paidPayments = activePayments.filter((p) => p.is_paid)
@@ -66,93 +60,118 @@ export default async function PaymentsPage({
   const totalExpected = activePayments.reduce((sum, p) => sum + Number(p.amount), 0)
   const totalPaid = paidPayments.reduce((sum, p) => sum + Number(p.amount), 0)
   const totalUnpaid = unpaidPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+  const collectionRate = activePayments.length > 0 ? Math.round((paidPayments.length / activePayments.length) * 100) : 0
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
   const isEarlyMonth = isCurrentMonth && now.getDate() <= 5
 
   return (
-    <div>
-      <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">الدفعات الشهرية</h1>
+          <h1 className="text-2xl font-bold text-slate-900">الدفعات الشهرية</h1>
           <p className="text-slate-500 text-sm mt-1">
             {formatMonthYear(month, year)}
-            {generatorName && ` — ${generatorName}`}
+            {generatorName && ` · ${generatorName}`}
           </p>
         </div>
         <MonthSelector year={year} month={month} />
       </div>
 
       {isEarlyMonth && (
-        <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl px-5 py-3 text-sm text-blue-800 flex items-center gap-2">
-          <span>🔔</span>
-          <span>أنت في بداية الشهر — الوقت المناسب لتسجيل الدفعات.</span>
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3.5 flex items-center gap-3 text-blue-800 text-sm">
+          <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+          </svg>
+          أنت في بداية الشهر — الوقت المناسب لتسجيل الدفعات.
         </div>
       )}
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-          <p className="text-xs text-slate-500 mb-1">الإجمالي المتوقع</p>
-          <p className="text-lg font-bold text-slate-700">{formatCurrency(totalExpected)}</p>
-          <p className="text-xs text-slate-400">{activePayments.length} مشترك</p>
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm text-center">
+          <p className="text-2xl font-bold text-slate-800">{activePayments.length}</p>
+          <p className="text-xs text-slate-500 mt-1">إجمالي</p>
+          <p className="text-xs font-medium text-slate-600 mt-1">{formatCurrency(totalExpected)}</p>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-          <p className="text-xs text-green-600 mb-1">تم التحصيل</p>
-          <p className="text-lg font-bold text-green-700">{formatCurrency(totalPaid)}</p>
-          <p className="text-xs text-green-500">{paidPayments.length} مشترك</p>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 shadow-sm text-center">
+          <p className="text-2xl font-bold text-emerald-700">{paidPayments.length}</p>
+          <p className="text-xs text-emerald-600 mt-1">مدفوع</p>
+          <p className="text-xs font-medium text-emerald-700 mt-1">{formatCurrency(totalPaid)}</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-          <p className="text-xs text-red-600 mb-1">متبقي</p>
-          <p className="text-lg font-bold text-red-700">{formatCurrency(totalUnpaid)}</p>
-          <p className="text-xs text-red-400">{unpaidPayments.length} مشترك</p>
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-4 shadow-sm text-center">
+          <p className="text-2xl font-bold text-red-700">{unpaidPayments.length}</p>
+          <p className="text-xs text-red-500 mt-1">متبقي</p>
+          <p className="text-xs font-medium text-red-600 mt-1">{formatCurrency(totalUnpaid)}</p>
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex justify-between text-xs text-slate-500 mb-2">
+          <span>نسبة التحصيل</span>
+          <span className="font-bold text-slate-700">{collectionRate}%</span>
+        </div>
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-linear-to-l from-emerald-500 to-emerald-400 rounded-full transition-all duration-500"
+            style={{ width: `${collectionRate}%` }}
+          />
         </div>
       </div>
 
       {activePayments.length === 0 ? (
-        <div className="text-center py-16 text-slate-400 bg-white rounded-xl border border-slate-200">
-          <p className="text-4xl mb-3">◎</p>
-          <p className="font-medium">لا توجد دفعات لهذا الشهر</p>
-          <p className="text-sm mt-1">أضف مشتركين أولاً من صفحة المشتركين</p>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-14 text-center">
+          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <rect x="1" y="4" width="22" height="16" rx="2"/><path strokeLinecap="round" d="M1 10h22"/>
+            </svg>
+          </div>
+          <p className="font-semibold text-slate-700">لا توجد دفعات لهذا الشهر</p>
+          <p className="text-sm text-slate-400 mt-1">أضف مشتركين أولاً من صفحة المشتركين</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">المشترك</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">الأمبير</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">المبلغ</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">ملاحظة</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-600">الحالة</th>
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-right px-5 py-3.5 font-semibold text-slate-600">المشترك</th>
+                  <th className="text-right px-5 py-3.5 font-semibold text-slate-600">الأمبير</th>
+                  <th className="text-right px-5 py-3.5 font-semibold text-slate-600">المبلغ</th>
+                  <th className="text-right px-5 py-3.5 font-semibold text-slate-600">ملاحظة</th>
+                  <th className="text-right px-5 py-3.5 font-semibold text-slate-600">الحالة</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {activePayments.map((payment) => {
                   const sub = payment.subscribers
                   return (
-                    <tr key={payment.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-slate-800">{sub?.full_name}</p>
-                        {sub?.phone_number && (
-                          <p className="text-xs text-slate-400">{sub.phone_number}</p>
-                        )}
+                    <tr key={payment.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-5 py-4">
+                        <p className="font-semibold text-slate-800">{sub?.full_name}</p>
+                        {sub?.phone_number && <p className="text-xs text-slate-400 mt-0.5">{sub.phone_number}</p>}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 font-mono">{sub?.ampere_count} A</td>
-                      <td className="px-4 py-3 font-semibold text-slate-800">
+                      <td className="px-5 py-4">
+                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-lg">
+                          ⚡ {sub?.ampere_count} A
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 font-bold text-slate-800">
                         {formatCurrency(Number(payment.amount))}
                       </td>
-                      <td className="px-4 py-3 text-xs">
+                      <td className="px-5 py-4">
                         {payment.is_prorated ? (
-                          <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
-                            مقسّط ({payment.days_in_period}/{payment.total_days_in_month} يوم)
+                          <span className="bg-amber-50 text-amber-700 text-xs px-2.5 py-1 rounded-lg font-medium">
+                            مقسّط · {payment.days_in_period}/{payment.total_days_in_month} يوم
                           </span>
                         ) : (
-                          <span className="text-slate-400">شهر كامل</span>
+                          <span className="text-slate-400 text-xs">شهر كامل</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-4">
                         <PaymentToggle paymentId={payment.id} isPaid={payment.is_paid} />
                       </td>
                     </tr>
@@ -161,7 +180,38 @@ export default async function PaymentsPage({
               </tbody>
             </table>
           </div>
-        </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-3">
+            {activePayments.map((payment) => {
+              const sub = payment.subscribers
+              return (
+                <div key={payment.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <p className="font-semibold text-slate-800">{sub?.full_name}</p>
+                      {sub?.phone_number && <p className="text-xs text-slate-400 mt-0.5">{sub.phone_number}</p>}
+                    </div>
+                    <p className="font-bold text-slate-800 shrink-0">{formatCurrency(Number(payment.amount))}</p>
+                  </div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-lg">
+                      ⚡ {sub?.ampere_count} A
+                    </span>
+                    {payment.is_prorated && (
+                      <span className="bg-amber-50 text-amber-700 text-xs px-2.5 py-1 rounded-lg">
+                        مقسّط · {payment.days_in_period}/{payment.total_days_in_month} يوم
+                      </span>
+                    )}
+                  </div>
+                  <div className="pt-3 border-t border-slate-100">
+                    <PaymentToggle paymentId={payment.id} isPaid={payment.is_paid} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
   )

@@ -24,13 +24,13 @@ export function PaymentToggle({ paymentId, isPaid }: PaymentToggleProps) {
     <button
       onClick={handleToggle}
       disabled={isPending}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
         paid
-          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-          : 'bg-red-100 text-red-700 hover:bg-red-200'
+          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
+          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
       } ${isPending ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
     >
-      <span className="text-base leading-none">{paid ? '✓' : '✗'}</span>
+      <span className={`w-2 h-2 rounded-full ${paid ? 'bg-emerald-500' : 'bg-slate-400'}`} />
       {paid ? 'مدفوع' : 'غير مدفوع'}
     </button>
   )

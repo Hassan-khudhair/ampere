@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from '@/components/Sidebar'
+import { DashboardShell } from '@/components/DashboardShell'
 import type { UserRole, Generator } from '@/lib/types/database'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -28,15 +28,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Sidebar
-        userEmail={user.email!}
-        role={userRole?.role ?? ''}
-        generatorName={generatorName}
-      />
-      <main className="mr-64 min-h-screen">
-        <div className="p-6 max-w-6xl">{children}</div>
-      </main>
-    </div>
+    <DashboardShell
+      userEmail={user.email!}
+      role={userRole?.role ?? ''}
+      generatorName={generatorName}
+    >
+      {children}
+    </DashboardShell>
   )
 }
