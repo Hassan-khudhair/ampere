@@ -1,6 +1,5 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { calculateMonthlyBilling, subscriberIsEligibleForMonth } from '@/lib/utils/billing'
@@ -23,13 +22,10 @@ async function getGeneratorId(supabase: Awaited<ReturnType<typeof createClient>>
   return (data as UserRole | null)?.generator_id ?? null
 }
 
-export async function createSubscriberAction(
-  _prevState: SubscriberState | null,
-  formData: FormData
-): Promise<SubscriberState | null> {
+export async function createSubscriberAction(formData: FormData): Promise<SubscriberState | null> {
   const supabase = await createClient()
   const generatorId = await getGeneratorId(supabase)
-  if (!generatorId) return { error: 'غير مصرح' }
+  if (!generatorId) return { error: 'غير مصرح — تأكد أنك مسجّل دخول كمشرف مولدة' }
 
   const full_name = (formData.get('full_name') as string)?.trim()
   const phone_number = (formData.get('phone_number') as string)?.trim() || null
@@ -49,7 +45,7 @@ export async function createSubscriberAction(
     .select()
     .single()
 
-  if (error || !subscriber) return { error: 'فشل إضافة المشترك' }
+  if (error || !subscriber) return { error: `فشل إضافة المشترك: ${error?.message ?? 'خطأ غير معروف'}` }
 
   const sub = subscriber as Subscriber
 
@@ -85,16 +81,13 @@ export async function createSubscriberAction(
   revalidatePath('/subscribers')
   revalidatePath('/payments')
   revalidatePath('/')
-  redirect('/subscribers')
+  return null // null = success, client handles navigation
 }
 
-export async function updateSubscriberAction(
-  _prevState: SubscriberState | null,
-  formData: FormData
-): Promise<SubscriberState | null> {
+export async function updateSubscriberAction(formData: FormData): Promise<SubscriberState | null> {
   const supabase = await createClient()
   const generatorId = await getGeneratorId(supabase)
-  if (!generatorId) return { error: 'غير مصرح' }
+  if (!generatorId) return { error: 'غير مصرح — تأكد أنك مسجّل دخول كمشرف مولدة' }
 
   const id = formData.get('id') as string
   const full_name = (formData.get('full_name') as string)?.trim()
@@ -115,11 +108,11 @@ export async function updateSubscriberAction(
     .eq('id', id)
     .eq('generator_id', generatorId)
 
-  if (error) return { error: 'فشل تحديث المشترك' }
+  if (error) return { error: `فشل تحديث المشترك: ${error.message}` }
 
   revalidatePath('/subscribers')
   revalidatePath('/')
-  redirect('/subscribers')
+  return null // null = success, client handles navigation
 }
 
 export async function deleteSubscriberAction(id: string) {

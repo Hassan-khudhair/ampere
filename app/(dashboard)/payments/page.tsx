@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ensurePaymentsForMonth } from '@/lib/actions/payments'
 import { PaymentToggle } from '@/components/PaymentToggle'
 import { MonthSelector } from '@/components/MonthSelector'
+import { ExportButton } from '@/components/ExportButton'
 import { formatCurrency, formatMonthYear } from '@/lib/utils/format'
 import type { UserRole, Generator, MonthlyPayment, Subscriber } from '@/lib/types/database'
 
@@ -65,10 +66,21 @@ export default async function PaymentsPage({
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
   const isEarlyMonth = isCurrentMonth && now.getDate() <= 5
 
+  const exportRows = activePayments.map(p => ({
+    subscriberName: p.subscribers?.full_name ?? '',
+    phone: p.subscribers?.phone_number ?? null,
+    ampere: Number(p.subscribers?.ampere_count ?? 0),
+    amount: Number(p.amount),
+    isPaid: p.is_paid,
+    isProrated: p.is_prorated,
+    daysInPeriod: p.days_in_period,
+    totalDaysInMonth: p.total_days_in_month,
+  }))
+
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">الدفعات الشهرية</h1>
           <p className="text-slate-500 text-sm mt-1">
@@ -76,7 +88,22 @@ export default async function PaymentsPage({
             {generatorName && ` · ${generatorName}`}
           </p>
         </div>
-        <MonthSelector year={year} month={month} />
+        <div className="flex items-center gap-3 flex-wrap">
+          <MonthSelector year={year} month={month} />
+          {activePayments.length > 0 && (
+            <ExportButton
+              rows={exportRows}
+              month={month}
+              year={year}
+              generatorName={generatorName}
+              totalExpected={totalExpected}
+              totalPaid={totalPaid}
+              totalUnpaid={totalUnpaid}
+              paidCount={paidPayments.length}
+              unpaidCount={unpaidPayments.length}
+            />
+          )}
+        </div>
       </div>
 
       {isEarlyMonth && (

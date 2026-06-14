@@ -1,26 +1,47 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Subscriber } from '@/lib/types/database'
 
 interface SubscriberFormProps {
-  action: (prevState: { error?: string } | null, formData: FormData) => Promise<{ error?: string } | null>
+  action: (formData: FormData) => Promise<{ error?: string } | null>
   subscriber?: Subscriber
   cancelHref?: string
 }
 
 export function SubscriberForm({ action, subscriber, cancelHref = '/subscribers' }: SubscriberFormProps) {
-  const [state, formAction, pending] = useActionState(action, null)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  const router = useRouter()
+
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    const formData = new FormData(e.currentTarget)
+    startTransition(async () => {
+      const result = await action(formData)
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        router.push('/subscribers')
+        router.refresh()
+      }
+    })
+  }
 
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {subscriber && <input type="hidden" name="id" value={subscriber.id} />}
 
-      {state?.error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-          {state.error}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm flex items-center gap-2">
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 8v4m0 4h.01"/>
+          </svg>
+          {error}
         </div>
       )}
 
@@ -111,7 +132,7 @@ export function SubscriberForm({ action, subscriber, cancelHref = '/subscribers'
                 }}
               />
               <div className="w-11 h-6 bg-slate-200 peer-checked:bg-blue-600 rounded-full transition-colors" />
-              <div className="absolute top-0.5 right-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-[-20px]" />
+              <div className="absolute top-0.5 right-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:-translate-x-5" />
             </div>
             <span className="text-sm font-medium text-slate-700">مشترك نشط</span>
           </label>
@@ -140,13 +161,19 @@ export function SubscriberForm({ action, subscriber, cancelHref = '/subscribers'
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 sm:flex-none sm:min-w-[120px] bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium px-6 py-2.5 rounded-lg text-sm transition-colors"
+          className="flex-1 sm:flex-none sm:min-w-30 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium px-6 py-2.5 rounded-lg text-sm transition-colors inline-flex items-center justify-center gap-2"
         >
+          {pending && (
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+          )}
           {pending ? 'جاري الحفظ...' : (subscriber ? 'حفظ التعديلات' : 'إضافة المشترك')}
         </button>
         <a
           href={cancelHref}
-          className="flex-1 sm:flex-none sm:min-w-[100px] text-center border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium px-6 py-2.5 rounded-lg text-sm transition-colors"
+          className="flex-1 sm:flex-none sm:min-w-25 text-center border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium px-6 py-2.5 rounded-lg text-sm transition-colors"
         >
           إلغاء
         </a>
