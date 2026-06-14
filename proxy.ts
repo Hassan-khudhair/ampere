@@ -25,17 +25,18 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // getSession() reads the JWT from the cookie locally — zero network round-trip.
+  // getUser() would verify with Supabase on every request, adding 100–300ms per nav.
+  // Real security is enforced by RLS on every DB query inside pages/actions.
+  const { data: { session } } = await supabase.auth.getSession()
 
   const isLoginPage = request.nextUrl.pathname === '/login'
 
-  if (!user && !isLoginPage) {
+  if (!session && !isLoginPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && isLoginPage) {
+  if (session && isLoginPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

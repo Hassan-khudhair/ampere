@@ -1,36 +1,26 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/DashboardShell'
-import type { UserRole, Generator } from '@/lib/types/database'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) redirect('/login')
 
+  // Single query: join user_roles + generators in one round-trip instead of two
   const { data: roleData } = await supabase
     .from('user_roles')
-    .select('role, generator_id')
+    .select('role, generator_id, generators(name)')
     .eq('user_id', user.id)
     .single()
 
-  const userRole = roleData as UserRole | null
-
-  let generatorName: string | null = null
-  if (userRole?.generator_id) {
-    const { data: genData } = await supabase
-      .from('generators')
-      .select('name')
-      .eq('id', userRole.generator_id)
-      .single()
-    generatorName = (genData as Pick<Generator, 'name'> | null)?.name ?? null
-  }
+  const role = (roleData as { role: string; generator_id: string | null; generators: { name: string } | null } | null)
+  const generatorName = role?.generators?.name ?? null
 
   return (
     <DashboardShell
       userEmail={user.email!}
-      role={userRole?.role ?? ''}
+      role={role?.role ?? ''}
       generatorName={generatorName}
     >
       {children}
