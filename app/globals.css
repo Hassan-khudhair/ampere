@@ -3,12 +3,32 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+
+  /* Safe-area CSS variables — filled by the browser on notched/rounded devices.
+     Fall back to 0px on devices with no safe area (most desktops, older phones). */
+  --sat: env(safe-area-inset-top,    0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left,   0px);
+  --sar: env(safe-area-inset-right,  0px);
 }
 
-body {
+html, body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+
+  /* ── iOS Safari viewport height fix ──────────────────────────────────────
+     100vh on iOS includes the Safari toolbar, so the bottom of the page
+     is hidden when the toolbar is visible.  -webkit-fill-available measures
+     only the *visible* viewport, which matches the user's expectation.
+     We set it on both html and body so min-h-screen works correctly. */
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+html {
+  /* Required for -webkit-fill-available to work on the body */
+  height: -webkit-fill-available;
 }
 
 * {
@@ -20,7 +40,15 @@ button, a {
   transition: all 0.15s ease;
 }
 
-/* Custom scrollbar */
+/* Momentum-based scrolling in overflow containers — iOS PWA only */
+.overflow-y-auto,
+.overflow-y-scroll,
+.overflow-x-auto,
+.overflow-x-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar (desktop only — hidden on touch devices by OS) */
 ::-webkit-scrollbar {
   width: 6px;
 }
