@@ -3,17 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 import CreateUserForm from '@/components/CreateUserForm'
 import DeleteUserButton from '@/components/DeleteUserButton'
 import { formatCurrency } from '@/lib/utils/format'
-import type { UserRole, Generator } from '@/lib/types/database'
-
-interface UserRoleWithGenerator extends UserRole {
-  generator?: Generator | null
-}
 
 interface UserRow {
   id: string
   email: string
   created_at: string
-  role: UserRoleWithGenerator | null
+  role: {
+    role: string
+    generator_id: string | null
+    generator: { name: string; ampere_price: number } | null
+  } | null
 }
 
 export default async function AdminUsersPage() {
@@ -21,70 +20,32 @@ export default async function AdminUsersPage() {
   const supabase = await createClient()
   const { data: { user: me } } = await supabase.auth.getUser()
 
-  // Direct REST call to Admin API — more reliable than SDK auth.admin in Server Components
-  type AuthUser = { id: string; email?: string; created_at: string }
-  let authUsers: AuthUser[] = []
-  let dataError: string | null = null
+  const { data: rpcData, error: rpcError } = await adminClient.rpc('get_users_with_roles')
 
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users?per_page=1000`,
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-          'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      }
-    )
-    if (res.ok) {
-      const json = await res.json()
-      authUsers = (json?.users ?? []) as AuthUser[]
-    } else {
-      dataError = `تعذّر جلب المستخدمين (${res.status})`
-    }
-  } catch (e) {
-    dataError = `خطأ في الاتصال: ${String(e)}`
-  }
+  const rows = (rpcData ?? []) as {
+    id: string
+    email: string | null
+    created_at: string
+    role: string | null
+    generator_id: string | null
+    generator_name: string | null
+    generator_price: number | null
+  }[]
 
-  const { data: rolesData, error: rolesError } = await adminClient
-    .from('user_roles')
-    .select('user_id, role, generator_id, id, created_at')
-
-  if (rolesError && !dataError) dataError = `خطأ في صلاحيات الجدول: ${rolesError.message}`
-
-  const roles = (rolesData ?? []) as UserRole[]
-
-  const generatorIds = roles
-    .map(r => r.generator_id)
-    .filter((id): id is string => !!id)
-
-  let generators: Generator[] = []
-  if (generatorIds.length > 0) {
-    const { data: genData } = await adminClient
-      .from('generators')
-      .select('id, name, ampere_price, created_at')
-      .in('id', generatorIds)
-    generators = (genData ?? []) as Generator[]
-  }
-
-  const users: UserRow[] = authUsers.map(u => {
-    const roleRecord = roles.find(r => r.user_id === u.id) ?? null
-    let roleWithGen: UserRoleWithGenerator | null = null
-    if (roleRecord) {
-      const gen = roleRecord.generator_id
-        ? generators.find(g => g.id === roleRecord.generator_id) ?? null
-        : null
-      roleWithGen = { ...roleRecord, generator: gen }
-    }
-    return {
-      id: u.id,
-      email: u.email ?? '—',
-      created_at: u.created_at,
-      role: roleWithGen,
-    }
-  })
+  const users: UserRow[] = rows.map(row => ({
+    id: row.id,
+    email: row.email ?? '—',
+    created_at: row.created_at,
+    role: row.role
+      ? {
+          role: row.role,
+          generator_id: row.generator_id,
+          generator: row.generator_name
+            ? { name: row.generator_name, ampere_price: row.generator_price ?? 0 }
+            : null,
+        }
+      : null,
+  }))
 
   users.sort((a, b) => {
     const aSuper = a.role?.role === 'super_admin' ? 0 : 1
@@ -106,14 +67,14 @@ export default async function AdminUsersPage() {
         </p>
       </div>
 
-      {dataError && (
+      {rpcError && (
         <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-start gap-3">
           <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 8v4m0 4h.01"/>
           </svg>
           <div>
             <p className="font-semibold text-red-800 text-sm">فشل تحميل البيانات</p>
-            <p className="text-red-700 text-xs mt-1 font-mono">{dataError}</p>
+            <p className="text-red-700 text-xs mt-1 font-mono">{rpcError.message}</p>
           </div>
         </div>
       )}
@@ -189,14 +150,18 @@ export default async function AdminUsersPage() {
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                            isSuperAdmin
-                              ? 'bg-purple-100 text-purple-700'
-                              : 'bg-emerald-100 text-emerald-700'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isSuperAdmin ? 'bg-purple-500' : 'bg-emerald-500'}`} />
-                            {isSuperAdmin ? 'مشرف عام' : 'مشرف مولدة'}
-                          </span>
+                          {user.role ? (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                              isSuperAdmin
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'bg-emerald-100 text-emerald-700'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${isSuperAdmin ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+                              {isSuperAdmin ? 'مشرف عام' : 'مشرف مولدة'}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">بدون دور</span>
+                          )}
                         </td>
                         <td className="px-5 py-4">
                           {user.role?.generator ? (
@@ -246,11 +211,15 @@ export default async function AdminUsersPage() {
                           {isMe && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full shrink-0">أنت</span>}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                            isSuperAdmin ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
-                          }`}>
-                            {isSuperAdmin ? 'مشرف عام' : 'مشرف مولدة'}
-                          </span>
+                          {user.role ? (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                              isSuperAdmin ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
+                            }`}>
+                              {isSuperAdmin ? 'مشرف عام' : 'مشرف مولدة'}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">بدون دور</span>
+                          )}
                           {user.role?.generator && (
                             <span className="text-xs text-slate-500">{user.role.generator.name}</span>
                           )}
