@@ -8,8 +8,6 @@ interface SidebarProps {
   userEmail: string
   role: string
   generatorName?: string | null
-  isOpen?: boolean
-  onClose?: () => void
 }
 
 const navItems = [
@@ -53,9 +51,7 @@ const adminItem = {
   label: 'إدارة المستخدمين',
   icon: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
     </svg>
   ),
 }
@@ -71,7 +67,7 @@ const settingsItem = {
   ),
 }
 
-export function Sidebar({ userEmail, role, generatorName, isOpen = false, onClose }: SidebarProps) {
+export function Sidebar({ userEmail, role, generatorName }: SidebarProps) {
   const pathname = usePathname()
   const links = role === 'super_admin'
     ? [...navItems, adminItem]
@@ -79,36 +75,21 @@ export function Sidebar({ userEmail, role, generatorName, isOpen = false, onClos
   const initials = userEmail.slice(0, 2).toUpperCase()
 
   return (
-    <aside
-      className={`fixed inset-y-0 right-0 w-72 bg-slate-900 text-white flex flex-col z-40
-        transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0`}
-    >
+    <aside className="hidden md:flex fixed inset-y-0 right-0 w-72 bg-slate-900 text-white flex-col z-40">
       {/* Header */}
       <div className="px-5 py-5 border-b border-slate-700/60">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M13 2L4.09 12.97 12 12l-1 9.03L21 12h-8l1-10z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-white leading-tight">نظام المولدات</h1>
-              {generatorName && (
-                <p className="text-xs text-slate-400 mt-0.5 truncate max-w-36">{generatorName}</p>
-              )}
-            </div>
-          </div>
-          {/* Close button — mobile only */}
-          <button
-            onClick={onClose}
-            className="md:hidden p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13 2L4.09 12.97 12 12l-1 9.03L21 12h-8l1-10z" />
             </svg>
-          </button>
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-white leading-tight">نظام المولدات</h1>
+            {generatorName && (
+              <p className="text-xs text-slate-400 mt-0.5 truncate max-w-36">{generatorName}</p>
+            )}
+          </div>
         </div>
       </div>
 
